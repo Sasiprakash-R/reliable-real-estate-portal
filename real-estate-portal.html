@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Flask MongoDB Example</title>
+    <link rel="stylesheet" href="style/real-estate-portal.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<h1>Simple User Management</h1>
+
+<h2>Add User</h2>
+<form id="userForm">
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <button type="submit">Add User</button>
+</form>
+
+<h2>Users List</h2>
+<button id="loadUsers">Load Users</button>
+<ul id="userList"></ul>
+
+<script>
+    // Add user via POST request
+    $("#userForm").submit(function(event) {
+        event.preventDefault();
+        
+        let name = $("#name").val();
+        let email = $("#email").val();
+
+        $.ajax({
+            url: 'http://127.0.0.1:5000/add_user',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ "name": name, "email": email }),
+            success: function(response) {
+                alert("User added!");
+                $("#name").val('');
+                $("#email").val('');
+            },
+            error: function(error) {
+                alert("Error adding user");
+            }
+        });
+    });
+
+    // Fetch users from backend via GET request
+    $("#loadUsers").click(function() {
+        $.ajax({
+            url: 'http://127.0.0.1:5000/get_users',
+            method: 'GET',
+            success: function(response) {
+                $("#userList").empty();
+                response.forEach(function(user) {
+                    $("#userList").append(`<li>Name: ${user.name}, Email: ${user.email}</li>`);
+                });
+            },
+            error: function(error) {
+                alert("Error fetching users");
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
