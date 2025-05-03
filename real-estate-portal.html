@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Real Estate Portal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .hidden { display: none; }
+        form input, form select, form textarea {
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px;
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .property-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .logout-btn {
+            background-color: #dc3545;
+            margin-top: 20px;
+        }
+        .error-message {
+            color: red;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sign Up Section -->
+<div class="container" id="signup-section">
+    <h2>Sign Up to Real Estate Portal</h2>
+    <form id="signupForm">
+        <input type="text" id="signup-username" placeholder="Username" required>
+        <input type="email" id="signup-email" placeholder="Email" required>
+        <input type="password" id="signup-password" placeholder="Password" required>
+        <select id="signup-role" required>
+            <option value="">Select Role</option>
+            <option value="buyer">Buyer</option>
+            <option value="seller">Seller</option>
+        </select>
+        <button type="submit">Sign Up</button>
+    </form>
+    <p>Already have an account? <a href="#" id="show-login">Login here</a></p>
+    <p class="error-message" id="signup-error"></p>
+</div>
+
+<!-- Login Section -->
+<div class="container hidden" id="login-section">
+    <h2>Login to Real Estate Portal</h2>
+    <form id="loginForm">
+        <input type="text" id="login-username" placeholder="Username" required>
+        <input type="password" id="login-password" placeholder="Password" required>
+        <button type="submit">Login</button>
+    </form>
+    <p>Don't have an account? <a href="#" id="show-signup">Sign up here</a></p>
+    <p class="error-message" id="login-error"></p>
+</div>
+
+<!-- Seller Dashboard -->
+<div class="container hidden" id="seller-dashboard">
+    <h2>Seller Dashboard</h2>
+    <form id="propertyForm">
+        <input type="text" id="property-name" placeholder="Property Name" required>
+        <input type="number" id="property-price" placeholder="Price" required>
+        <textarea id="property-description" placeholder="Description" required></textarea>
+        <button type="submit">Add Property</button>
+    </form>
+
+    <h3>Your Properties</h3>
+    <div id="seller-properties"></div>
+
+    <button class="logout-btn">Logout</button>
+</div>
+
+<!-- Buyer Dashboard -->
+<div class="container hidden" id="buyer-dashboard">
+    <h2>Buyer Dashboard</h2>
+
+    <h3>Available Properties</h3>
+    <div id="buyer-properties"></div>
+
+    <h3>My Purchased Properties</h3>
+    <div id="purchased-properties"></div>
+
+    <button class="logout-btn">Logout</button>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const signupSection = document.getElementById("signup-section");
+    const loginSection = document.getElementById("login-section");
+    const sellerDashboard = document.getElementById("seller-dashboard");
+    const buyerDashboard = document.getElementById("buyer-dashboard");
+
+    const signupForm = document.getElementById("signupForm");
+    const loginForm = document.getElementById("loginForm");
+    const propertyForm = document.getElementById("propertyForm");
+
+    const signupError = document.getElementById("signup-error");
+    const loginError = document.getElementById("login-error");
+
+    const sellerProperties = document.getElementById("seller-properties");
+    const buyerProperties = document.getElementById("buyer-properties");
+    const purchasedProperties = document.getElementById("purchased-properties");
+
+    // Simulated database
+    let users = [];
+    let properties = [];
+    let currentUser = null;
+    let purchasedByBuyer = [];
+
+    document.getElementById("show-login").addEventListener("click", () => {
+        signupSection.classList.add("hidden");
+        loginSection.classList.remove("hidden");
+    });
+
+    document.getElementById("show-signup").addEventListener("click", () => {
+        loginSection.classList.add("hidden");
+        signupSection.classList.remove("hidden");
+    });
+
+    signupForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const username = document.getElementById("signup-username").value;
+        const email = document.getElementById("signup-email").value;
+        const password = document.getElementById("signup-password").value;
+        const role = document.getElementById("signup-role").value;
+
+        if (users.some(u => u.username === username)) {
+            signupError.textContent = "Username already exists!";
+            return;
+        }
+
+        users.push({ username, email, password, role });
+        signupError.textContent = "Registration successful! Please login.";
+        signupForm.reset();
+    });
+
+    loginForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const username = document.getElementById("login-username").value;
+        const password = document.getElementById("login-password").value;
+
+        const user = users.find(u => u.username === username && u.password === password);
+
+        if (user) {
+            currentUser = user;
+            loginSection.classList.add("hidden");
+            if (user.role === "seller") {
+                sellerDashboard.classList.remove("hidden");
+            } else {
+                buyerDashboard.classList.remove("hidden");
+                renderBuyerProperties();
+                renderPurchasedProperties();
+            }
+        } else {
+            loginError.textContent = "Invalid credentials!";
+        }
+    });
+
+    propertyForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const name = document.getElementById("property-name").value;
+        const price = document.getElementById("property-price").value;
+        const description = document.getElementById("property-description").value;
+
+        const property = { name, price, description, isSold: false };
+        properties.push(property);
+        renderSellerProperties();
+        renderBuyerProperties();
+        propertyForm.reset();
+    });
+
+    document.querySelectorAll(".logout-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            currentUser = null;
+            purchasedByBuyer = [];
+            sellerDashboard.classList.add("hidden");
+            buyerDashboard.classList.add("hidden");
+            loginSection.classList.remove("hidden");
+            loginForm.reset();
+            loginError.textContent = "";
+        });
+    });
+
+    function renderSellerProperties() {
+        sellerProperties.innerHTML = "";
+        properties.forEach((prop) => {
+            const div = document.createElement("div");
+            div.classList.add("property-card");
+            div.innerHTML = `<h4>${prop.name}</h4>
+                             <p>Price: $${prop.price}</p>
+                             <p>${prop.description}</p>
+                             <p>Status: ${prop.isSold ? "<strong>Sold</strong>" : "Available"}</p>`;
+            sellerProperties.appendChild(div);
+        });
+    }
+
+    function renderBuyerProperties() {
+        buyerProperties.innerHTML = "";
+        properties.forEach((prop, index) => {
+            if (!prop.isSold) {
+                const div = document.createElement("div");
+                div.classList.add("property-card");
+                div.innerHTML = `<h4>${prop.name}</h4>
+                                 <p>Price: $${prop.price}</p>
+                                 <p>${prop.description}</p>
+                                 <button onclick="buyProperty(${index})">Buy</button>`;
+                buyerProperties.appendChild(div);
+            }
+        });
+    }
+
+    function renderPurchasedProperties() {
+        purchasedProperties.innerHTML = "";
+        purchasedByBuyer.forEach((prop) => {
+            const div = document.createElement("div");
+            div.classList.add("property-card");
+            div.innerHTML = `<h4>${prop.name}</h4>
+                             <p>Price: $${prop.price}</p>
+                             <p>${prop.description}</p>`;
+            purchasedProperties.appendChild(div);
+        });
+    }
+
+    window.buyProperty = function(index) {
+        properties[index].isSold = true;
+        purchasedByBuyer.push(properties[index]);
+        alert("You have successfully bought this property!");
+        renderBuyerProperties();
+        renderPurchasedProperties();
+        renderSellerProperties();
+    }
+});
+</script>
+</body>
+</html>
