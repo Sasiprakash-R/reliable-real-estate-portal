@@ -1,67 +1,316 @@
+<!-- Save as index.html and open in browser -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Flask MongoDB Example</title>
-    <link rel="stylesheet" href="style/real-estate-portal.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Real Estate Portal</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .hidden { display: none; }
+    input, select, textarea {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px;
+      width: 100%;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .property-card {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-top: 10px;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    .logout-btn {
+      background-color: #dc3545;
+      margin-top: 20px;
+    }
+    .nav-link {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .nav-link a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    .nav-link a:hover {
+      text-decoration: underline;
+    }
+    .message {
+      color: green;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .error-message {
+      color: red;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Simple User Management</h1>
+<!-- Home Page -->
+<div class="container" id="home-section">
+  <h2>Welcome to Real Estate Portal</h2>
+  <p>Choose your role to get started:</p>
+  <button onclick="showSignup()">Get Started</button>
+</div>
 
-<h2>Add User</h2>
-<form id="userForm">
-    <input type="text" id="name" placeholder="Name" required />
-    <input type="email" id="email" placeholder="Email" required />
-    <button type="submit">Add User</button>
-</form>
+<!-- Signup -->
+<div class="container hidden" id="signup-section">
+  <h2>Sign Up</h2>
+  <form id="signupForm">
+    <input type="text" id="signup-username" placeholder="Username" required />
+    <input type="email" id="signup-email" placeholder="Email" required />
+    <input type="password" id="signup-password" placeholder="Password" required />
+    <select id="signup-role" required>
+      <option value="">Select Role</option>
+      <option value="buyer">Buyer</option>
+      <option value="seller">Seller</option>
+      <option value="agent">Agent</option>
+    </select>
+    <button type="submit">Sign Up</button>
+  </form>
+  <p class="nav-link">Already have an account? <a href="#" onclick="switchToLogin()">Login</a></p>
+  <p class="error-message" id="signup-error"></p>
+  <p class="message" id="signup-success"></p>
+</div>
 
-<h2>Users List</h2>
-<button id="loadUsers">Load Users</button>
-<ul id="userList"></ul>
+<!-- Login -->
+<div class="container hidden" id="login-section">
+  <h2>Login</h2>
+  <form id="loginForm">
+    <input type="text" id="login-username" placeholder="Username" required />
+    <input type="password" id="login-password" placeholder="Password" required />
+    <button type="submit">Login</button>
+  </form>
+  <p class="nav-link">Don't have an account? <a href="#" onclick="switchToSignup()">Sign Up</a></p>
+  <p class="error-message" id="login-error"></p>
+</div>
+
+<!-- Dashboards -->
+<div class="container hidden" id="seller-dashboard">
+  <h2>Seller Dashboard</h2>
+  <form id="propertyForm">
+    <input type="text" id="property-name" placeholder="Property Name" required />
+    <input type="number" id="property-price" placeholder="Price" required />
+    <textarea id="property-description" placeholder="Description" required></textarea>
+    <button type="submit">Add Property</button>
+  </form>
+  <h3>Your Properties</h3>
+  <div id="seller-properties"></div>
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<div class="container hidden" id="buyer-dashboard">
+  <h2>Buyer Dashboard</h2>
+  <h3>Available Properties</h3>
+  <div id="buyer-properties"></div>
+  <h3>My Purchases</h3>
+  <div id="purchased-properties"></div>
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<div class="container hidden" id="agent-dashboard">
+  <h2>Agent Dashboard</h2>
+  <h3>All Properties</h3>
+  <div id="agent-properties"></div>
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
 
 <script>
-    // Add user via POST request
-    $("#userForm").submit(function(event) {
-        event.preventDefault();
-        
-        let name = $("#name").val();
-        let email = $("#email").val();
+  const users = [];
+  const properties = [];
+  let currentUser = null;
+  let purchased = [];
 
-        $.ajax({
-            url: 'http://127.0.0.1:5000/add_user',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ "name": name, "email": email }),
-            success: function(response) {
-                alert("User added!");
-                $("#name").val('');
-                $("#email").val('');
-            },
-            error: function(error) {
-                alert("Error adding user");
-            }
-        });
+  function showSignup() {
+    document.getElementById("home-section").classList.add("hidden");
+    document.getElementById("signup-section").classList.remove("hidden");
+  }
+
+  function switchToLogin() {
+    document.getElementById("signup-section").classList.add("hidden");
+    document.getElementById("login-section").classList.remove("hidden");
+  }
+
+  function switchToSignup() {
+    document.getElementById("login-section").classList.add("hidden");
+    document.getElementById("signup-section").classList.remove("hidden");
+  }
+
+  document.getElementById("signupForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const username = document.getElementById("signup-username").value.trim();
+    const email = document.getElementById("signup-email").value;
+    const password = document.getElementById("signup-password").value;
+    const role = document.getElementById("signup-role").value;
+
+    const exists = users.some(u => u.username === username);
+    if (exists) {
+      document.getElementById("signup-error").textContent = "Username already taken.";
+      return;
+    }
+
+    users.push({ username, email, password, role });
+    document.getElementById("signup-error").textContent = "";
+    document.getElementById("signup-success").textContent = "Signup successful! Please login.";
+    document.getElementById("signupForm").reset();
+  });
+
+  document.getElementById("loginForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const username = document.getElementById("login-username").value;
+    const password = document.getElementById("login-password").value;
+    const user = users.find(u => u.username === username && u.password === password);
+
+    if (!user) {
+      document.getElementById("login-error").textContent = "Invalid credentials.";
+      return;
+    }
+
+    currentUser = user;
+    purchased = [];
+    document.getElementById("login-section").classList.add("hidden");
+
+    if (user.role === "seller") {
+      document.getElementById("seller-dashboard").classList.remove("hidden");
+      renderSeller();
+    } else if (user.role === "buyer") {
+      document.getElementById("buyer-dashboard").classList.remove("hidden");
+      renderBuyer();
+    } else {
+      document.getElementById("agent-dashboard").classList.remove("hidden");
+      renderAgent();
+    }
+  });
+
+  function logout() {
+    currentUser = null;
+    purchased = [];
+    document.querySelectorAll(".container").forEach(c => c.classList.add("hidden"));
+    document.getElementById("login-section").classList.remove("hidden");
+    document.getElementById("loginForm").reset();
+  }
+
+  document.getElementById("propertyForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const name = document.getElementById("property-name").value;
+    const price = document.getElementById("property-price").value;
+    const description = document.getElementById("property-description").value;
+    properties.push({ name, price, description, isSold: false, agent: null, owner: currentUser.username });
+    e.target.reset();
+    renderSeller();
+    renderBuyer();
+    renderAgent();
+  });
+
+  function renderSeller() {
+    const container = document.getElementById("seller-properties");
+    container.innerHTML = "";
+    properties.filter(p => p.owner === currentUser.username).forEach(p => {
+      container.innerHTML += `
+        <div class="property-card">
+          <h4>${p.name}</h4>
+          <p>Price: $${p.price}</p>
+          <p>${p.description}</p>
+          <p>Status: ${p.isSold ? "Sold" : "Available"}</p>
+          <p>Agent: ${p.agent || "None"}</p>
+        </div>`;
+    });
+  }
+
+  function renderBuyer() {
+    const available = document.getElementById("buyer-properties");
+    const purchasedDiv = document.getElementById("purchased-properties");
+    available.innerHTML = "";
+    purchasedDiv.innerHTML = "";
+
+    properties.forEach((p, i) => {
+      if (!p.isSold) {
+        available.innerHTML += `
+          <div class="property-card">
+            <h4>${p.name}</h4>
+            <p>Price: $${p.price}</p>
+            <p>${p.description}</p>
+            <p>Agent: ${p.agent || "None"}</p>
+            <button onclick="buyProperty(${i})">Buy</button>
+          </div>`;
+      }
     });
 
-    // Fetch users from backend via GET request
-    $("#loadUsers").click(function() {
-        $.ajax({
-            url: 'http://127.0.0.1:5000/get_users',
-            method: 'GET',
-            success: function(response) {
-                $("#userList").empty();
-                response.forEach(function(user) {
-                    $("#userList").append(`<li>Name: ${user.name}, Email: ${user.email}</li>`);
-                });
-            },
-            error: function(error) {
-                alert("Error fetching users");
-            }
-        });
+    purchased.forEach(p => {
+      purchasedDiv.innerHTML += `
+        <div class="property-card">
+          <h4>${p.name}</h4>
+          <p>Price: $${p.price}</p>
+          <p>${p.description}</p>
+        </div>`;
     });
+  }
+
+  function renderAgent() {
+    const container = document.getElementById("agent-properties");
+    container.innerHTML = "";
+    properties.forEach((p, i) => {
+      container.innerHTML += `
+        <div class="property-card">
+          <h4>${p.name}</h4>
+          <p>Price: $${p.price}</p>
+          <p>${p.description}</p>
+          <p>Status: ${p.isSold ? "Sold" : "Available"}</p>
+          <p>Agent: ${p.agent || "None"}</p>
+          ${!p.agent ? `<button onclick="assignAgent(${i})">Assign Me</button>` : ""}
+        </div>`;
+    });
+  }
+
+  function buyProperty(index) {
+    const prop = properties[index];
+    prop.isSold = true;
+    purchased.push(prop);
+    renderBuyer();
+    renderSeller();
+    renderAgent();
+  }
+
+  function assignAgent(index) {
+    const prop = properties[index];
+    if (!prop.agent) {
+      prop.agent = currentUser.username;
+      renderAgent();
+      renderBuyer();
+      renderSeller();
+    }
+  }
 </script>
 
 </body>
